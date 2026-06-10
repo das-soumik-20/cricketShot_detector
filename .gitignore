@@ -1,0 +1,10 @@
+pycache/
+*.pyc
+venv/
+.venv/
+
+data/
+
+# Ignore OS metadata files
+.DS_Store
+Thumbs.db
