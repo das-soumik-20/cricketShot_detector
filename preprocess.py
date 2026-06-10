@@ -2,7 +2,7 @@ import tensorflow as tf
 
 def preprocess_data():
     IMG_SIZE = (224, 224)
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     data_dir = "data"
 
     # 1. Training Pool: Scrambling allowed, completely isolated root pool
@@ -24,7 +24,7 @@ def preprocess_data():
         seed=42,
         image_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
-        shuffle=False # Lock the file order in place!
+        shuffle=True 
     )
 
     # 3. Carve the static evaluation pool into two permanent halves

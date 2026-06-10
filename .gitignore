@@ -4,6 +4,7 @@ venv/
 .venv/
 
 data/
+test/
 
 # Ignore OS metadata files
 .DS_Store
