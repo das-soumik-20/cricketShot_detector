@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cricket Shot Detector</title>
+    <link rel="icon" type="image/png" href="/static/icon.png">
+
+    <style>
+        /* CSS Variables for Theming */
+        /* CSS Variables for ESPN Cricinfo Theme */
+        /* CSS Variables for Glassmorphism & ESPN Cricinfo Theme */
+        :root {
+            --bg-color: #f3f5f7;
+            --text-color: #111111;
+            --card-bg: rgba(255, 255, 255, 0.65); /* Translucent Glass */
+            --primary-blue: #03a9f4; 
+            --primary-hover: #0288d1;
+            --border-color: rgba(255, 255, 255, 0.6); /* Subtle Glass Border */
+            --bar-bg: rgba(225, 245, 254, 0.7);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            --transition: all 0.3s ease;
+            --blob-1: #81d4fa; /* Soft Light Blue */
+            --blob-2: #b2ebf2; /* Soft Cyan */
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0a0c10;
+            --text-color: #ffffff;
+            --card-bg: rgba(20, 22, 26, 0.6); /* Translucent Dark Glass */
+            --primary-blue: #03a9f4;
+            --primary-hover: #29b6f6;
+            --border-color: rgba(255, 255, 255, 0.08); /* Subtle Dark Border */
+            --bar-bg: rgba(1, 58, 82, 0.5);
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            --blob-1: #01579b; /* Deep Cricinfo Blue */
+            --blob-2: #004d40; /* Deep Teal */
+        }
+        /* Base Styles */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden; /* Keeps blobs from creating horizontal scrollbars */
+            z-index: 1;
+        }
+
+        /* Ambient Glassmorphism Background Blobs */
+        body::before, body::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px); /* Creates the soft gradient effect */
+            z-index: -1;
+            opacity: 0.5;
+            pointer-events: none; /* Prevents blobs from blocking clicks */
+            transition: var(--transition);
+        }
+
+        body::before {
+            top: 10%;
+            left: -10vw;
+            width: 40vw;
+            height: 40vw;
+            background: var(--blob-1);
+        }
+
+        body::after {
+            bottom: 10%;
+            right: -10vw;
+            width: 35vw;
+            height: 35vw;
+            background: var(--blob-2);
+        }
+
+        /* Header & Navigation */
+        header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 10px 0;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        
+        .theme-toggle:hover { border-color: var(--primary-blue); }
+
+        /* Main Card Container */
+        /* Main Card Container with Glassmorphism */
+        .card {
+            background-color: var(--card-bg);
+            backdrop-filter: blur(16px);         /* The magic glass effect */
+            -webkit-backdrop-filter: blur(16px); /* Safari support */
+            width: 100%;
+            max-width: 600px;
+            border-radius: 16px;                 /* Slightly rounder edges look better on glass */
+            box-shadow: var(--shadow);
+            padding: 30px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 20px;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary-blue);
+            background-color: var(--bar-bg);
+        }
+
+        .upload-area p { margin-top: 10px; font-size: 0.95rem; color: #7f8c8d; }
+        #file-input { display: none; }
+
+        /* Buttons */
+        .btn {
+            background-color: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: var(--transition);
+        }
+        
+        .btn:hover:not(:disabled) { background-color: var(--primary-hover); }
+        .btn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        /* Results Area */
+        .hidden { display: none !important; }
+        
+        .image-preview {
+            max-width: 100%;
+            height: auto;
+            max-height: 350px; 
+            object-fit: contain; /* This prevents cropping and stretching */
+            border-radius: 8px;
+            margin: 0 auto 20px auto; /* Centers the image */
+            display: block;
+            border: 1px solid var(--border-color);
+        }
+
+        .primary-result {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 5px;
+        }
+
+        .confidence-sub { font-size: 1rem; color: #7f8c8d; margin-bottom: 25px; }
+
+        /* Probability Bars */
+        .prob-container { text-align: left; margin-bottom: 25px; }
+        
+        .prob-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .prob-label { width: 80px; font-size: 0.85rem; font-weight: 600; }
+        
+        .prob-bar-wrapper {
+            flex-grow: 1;
+            background-color: var(--bar-bg);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 0 15px;
+        }
+        
+        .prob-bar-fill {
+            background-color: var(--primary-blue);
+            height: 100%;
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        
+        .prob-value { width: 45px; text-align: right; font-size: 0.85rem; }
+
+        /* Loader */
+        .loader {
+            border: 4px solid var(--bar-bg);
+            border-top: 4px solid var(--primary-blue);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1> What's that shot !? </h1>
+        <button class="theme-toggle" id="theme-btn">☀️ Light Mode</button>
+    </header>
+
+    <div class="card" id="upload-view">
+        <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Click to browse or drag & drop an image</p>
+        </div>
+        <input type="file" id="file-input" accept="image/jpeg, image/png, image/webp">
+        <button class="btn" id="analyze-btn" disabled>Analyze Shot</button>
+    </div>
+
+    <div class="card hidden" id="loading-view">
+        <div class="loader"></div>
+        <p>Running neural network inference...</p>
+    </div>
+
+    <div class="card hidden" id="results-view">
+        <img id="preview-img" class="image-preview" src="" alt="Uploaded Cricket Shot">
+        
+        <div class="primary-result" id="main-prediction">DRIVE</div>
+        <div class="confidence-sub">Confidence: <span id="main-confidence">98.5</span>%</div>
+
+        <div class="prob-container" id="probability-breakdown">
+            </div>
+
+        <button class="btn" onclick="resetApp()">Analyze Another Image</button>
+    </div>
+
+    <script>
+        // --- 1. Theme Toggling Logic ---
+        const themeBtn = document.getElementById('theme-btn');
+        const htmlDoc = document.documentElement;
+        
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = htmlDoc.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            htmlDoc.setAttribute('data-theme', newTheme);
+            themeBtn.textContent = newTheme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+        });
+
+        // --- 2. Element Selectors ---
+        const fileInput = document.getElementById('file-input');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const dropZone = document.getElementById('drop-zone');
+        
+        const uploadView = document.getElementById('upload-view');
+        const loadingView = document.getElementById('loading-view');
+        const resultsView = document.getElementById('results-view');
+        
+        const previewImg = document.getElementById('preview-img');
+        const mainPrediction = document.getElementById('main-prediction');
+        const mainConfidence = document.getElementById('main-confidence');
+        const breakdownContainer = document.getElementById('probability-breakdown');
+
+        let selectedFile = null;
+
+        // --- 3. File Selection Handling ---
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                dropZone.innerHTML = `<p style="color: var(--primary-blue); font-weight: bold;">✅ File Selected: ${selectedFile.name}</p>`;
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        // --- 4. API Submission ---
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            // Show loading, create image preview URL
+            uploadView.classList.add('hidden');
+            loadingView.classList.remove('hidden');
+            previewImg.src = URL.createObjectURL(selectedFile);
+
+            // Prepare form data for FastAPI
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("Server error occurred");
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                alert("Error analyzing image: " + error.message);
+                resetApp();
+            }
+        });
+
+        // --- 5. Render Results ---
+        function displayResults(data) {
+            loadingView.classList.add('hidden');
+            resultsView.classList.remove('hidden');
+
+            // Set main text
+            mainPrediction.textContent = data.shot;
+            mainConfidence.textContent = data.confidence;
+
+            // Clear old bars
+            breakdownContainer.innerHTML = '';
+
+            // Generate progress bars for each shot type
+            for (const [shotName, probValue] of Object.entries(data.All_probabilities)) {
+                const row = document.createElement('div');
+                row.className = 'prob-row';
+                
+                row.innerHTML = `
+                    <div class="prob-label">${shotName}</div>
+                    <div class="prob-bar-wrapper">
+                        <div class="prob-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="prob-value">${probValue}%</div>
+                `;
+                
+                breakdownContainer.appendChild(row);
+
+                // Trigger smooth animation
+                setTimeout(() => {
+                    row.querySelector('.prob-bar-fill').style.width = `${probValue}%`;
+                }, 100);
+            }
+        }
+
+        // --- 6. Reset App State ---
+        function resetApp() {
+            selectedFile = null;
+            fileInput.value = '';
+            analyzeBtn.disabled = true;
+            dropZone.innerHTML = `
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p>Click to browse or drag & drop an image</p>
+            `;
+            
+            resultsView.classList.add('hidden');
+            loadingView.classList.add('hidden');
+            uploadView.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
