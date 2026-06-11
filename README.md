@@ -3,7 +3,7 @@
 A deep learning computer vision web application designed to instantly classify classic cricket shots from raw images. Built using **TensorFlow/Keras** and served via a lightning-fast **FastAPI** backend, this model was trained on thousands of action shots to distinguish between the subtle biomechanics of a cricket swing.
 
 ### 🌐 Live Demo
-👉 **[Click Here to view the Live Web App](#insert_link_here)** *(Replace with your deployment link, e.g., Render/Vercel/AWS)*
+👉 **[Click Here to view the Live Web App](https://cricketshot-detector.onrender.com)** 
 
 ### 📸 Interface Preview
 ![Demo Screenshot](assets/demo.png)
